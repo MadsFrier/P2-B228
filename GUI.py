@@ -6,17 +6,11 @@ import os.path
 
 sg.theme('DarkBlack')
 
-bottomCoverColor = 0
-fuseAmount = 0
-topCoverType = 0
-topCoverColor = 0
-engraving = "No text"
-
 selectColor = (
     'Black', 'White', 'Blue')
-   
+
 selectFuse = (
-    '0', '1', '2')
+    '0', '1', '1*', '2')
 
 selectTopCoverType = (
     'Flat', 'Curved')
@@ -34,56 +28,28 @@ layout = [
 
 window = sg.Window("Dummy Phone Order", layout, finalize=True)
 
+class phone:
+
+    def __init__(self, bottomCoverColor, fuseAmount, topCoverType, topCoverColor, engraving):
+
+        self.bottomCoverColor = bottomCoverColor
+        self.fuseAmount = fuseAmount
+        self.topCoverType = topCoverType
+        self.topCoverColor = topCoverColor
+        self.engraving = engraving
+
 while True:
     event, values = window.read()
     print(event, values)
 
-    #Textbox
     if len(values["textbox"])>10:
         window.Element('textbox').Update(values['textbox'][:-1])
 
-    #Bottom cover color
-    if values['SBCC'] == "Black":
-        bottomCoverColor = 1
-
-    if values['SBCC'] == "White":
-        bottomCoverColor = 2
-
-    if values['SBCC'] == "Blue":
-        bottomCoverColor = 3
-
-    #Fuse amount
-    if values['SAOF'] == "0":
-        fuseAmount = 1
-
-    if values['SAOF'] == "1":
-        fuseAmount = 2
-
-    if values['SAOF'] == "2":
-        fuseAmount = 3
-
-    #Top cover type
-    if values['STCT'] == "Flat":
-        topCoverType = 1
-
-    if values['STCT'] == "Curved":
-        topCoverType = 2
-
-    #Top cover color
-    if values['STCC'] == "Black":
-        topCoverColor = 1
-
-    if values['STCC'] == "White":
-        topCoverColor = 2
-
-    if values['STCC'] == "Blue":
-        topCoverColor = 3
-    
     if event == sg.WINDOW_CLOSED:
         break
-    
+
     if event == 'PO':
-        if bottomCoverColor == 0 or fuseAmount == 0 or topCoverType == 0 or topCoverColor == 0:
+        if values['SBCC'] is "" or values['SAOF'] is "" or values['STCT'] is "" or values['STCC'] is "":
             sg.popup_error(f'Fill everything out!')
         else:
             #Place order
@@ -91,18 +57,38 @@ while True:
 
 window.close()
 
-print(bottomCoverColor, fuseAmount, topCoverType, topCoverColor)
-
 RL = Robolink()
- 
+
 robot = RL.Item('UR5e')
 
 home = RL.Item('Target 1')
 
-if bottomCoverColor == 1:
+phoneInfo = phone(values['SBCC'], values['SAOF'], values['STCT'], values['STCC'], values['textbox'])
+
+#List of RDK Programs
+x = RL.Item('RDKProg')
+
+#Bottom Cover Color
+if phoneInfo.bottomCoverColor == 'Black':
     assemble1 = RL.Item('Prog1')
     assemble1.RunProgram()
-
-if bottomCoverColor == 2:
-    assemble2 = RL.Item('Prog3')
+elif phoneInfo.bottomCoverColor == 'White':
+    assemble2 = RL.Item('Prog2')
     assemble2.RunProgram()
+elif phoneInfo.bottomCoverColor == 'Blue':
+    assemble3 = RL.Item('Prog3')
+    assemble3.RunProgram()
+
+#fuse Amount
+if phoneInfo.fuseAmount == '0':
+    assemble1 = RL.Item('Prog1')
+    assemble1.RunProgram()
+elif phoneInfo.fuseAmount == '1':
+    assemble2 = RL.Item('Prog2')
+    assemble2.RunProgram()
+elif phoneInfo.fuseAmount == '1*':
+    assemble3 = RL.Item('Prog3')
+    assemble3.RunProgram()
+elif phoneInfo.fuseAmount == '2':
+    assemble3 = RL.Item('Prog3')
+    assemble3.RunProgram()
