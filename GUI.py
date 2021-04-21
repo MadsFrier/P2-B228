@@ -66,29 +66,29 @@ home = RL.Item('Target 1')
 phoneInfo = phone(values['SBCC'], values['SAOF'], values['STCT'], values['STCC'], values['textbox'])
 
 #List of RDK Programs
-x = RL.Item('RDKProg')
+# x = RL.Item('RDKProg')
 
-#Bottom Cover Color
-if phoneInfo.bottomCoverColor == 'Black':
-    assemble1 = RL.Item('Prog1')
-    assemble1.RunProgram()
-elif phoneInfo.bottomCoverColor == 'White':
-    assemble2 = RL.Item('Prog2')
-    assemble2.RunProgram()
-elif phoneInfo.bottomCoverColor == 'Blue':
-    assemble3 = RL.Item('Prog3')
-    assemble3.RunProgram()
+# #Bottom Cover Color
+# if phoneInfo.bottomCoverColor == 'Black':
+#     assemble1 = RL.Item('Prog1')
+#     assemble1.RunProgram()
+# elif phoneInfo.bottomCoverColor == 'White':
+#     assemble2 = RL.Item('Prog2')
+#     assemble2.RunProgram()
+# elif phoneInfo.bottomCoverColor == 'Blue':
+#     assemble3 = RL.Item('Prog3')
+#     assemble3.RunProgram()
 
-#fuse Amount
-if phoneInfo.fuseAmount == '0':
-    assemble1 = RL.Item('Prog1')
-    assemble1.RunProgram()
-elif phoneInfo.fuseAmount == '1':
-    assemble2 = RL.Item('Prog2')
-    assemble2.RunProgram()
-elif phoneInfo.fuseAmount == '1*':
-    assemble3 = RL.Item('Prog3')
-    assemble3.RunProgram()
-elif phoneInfo.fuseAmount == '2':
-    assemble3 = RL.Item('Prog3')
-    assemble3.RunProgram()
+# #fuse Amount
+# if phoneInfo.fuseAmount == '0':
+#     assemble1 = RL.Item('Prog1')
+#     assemble1.RunProgram()
+# elif phoneInfo.fuseAmount == '1':
+#     assemble2 = RL.Item('Prog2')
+#     assemble2.RunProgram()
+# elif phoneInfo.fuseAmount == '1*':
+#     assemble3 = RL.Item('Prog3')
+#     assemble3.RunProgram()
+# elif phoneInfo.fuseAmount == '2':
+#     assemble3 = RL.Item('Prog3')
+#     assemble3.RunProgram()
