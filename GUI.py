@@ -3,6 +3,7 @@ from robodk import *
 
 import PySimpleGUI as sg
 import os.path
+import re
 
 sg.theme('DarkBlack')
 
@@ -63,13 +64,16 @@ window.close()
 RL = Robolink()
 
 robot = RL.Item('UR5e')
+robot.setSpeed(20, 20, 20, 20)
+home = RL.Item('Home')
+robot.MoveJ(home)
 
-home = RL.Item('Target 1')
 
-robot.setSpeed(5, 5, 5, 5)
 
-robot.MoveJ(RL.Item('Target 2'))
-
+target = RL.Item('Bottom cover')
+approach = target.Pose()*transl(0, -200, 0)
+robot.MoveJ(transl(-200, 0, 0))
+print(target.Pose())
 #phoneInfo = phone(values['SBCC'], values['SAOF'], values['STCT'], values['STCC'], values['textbox'])
 
 #assemble1 = RL.Item(values['SBCC'])
