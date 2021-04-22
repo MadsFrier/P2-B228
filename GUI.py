@@ -3,12 +3,12 @@ from robodk import *
 
 import PySimpleGUI as sg
 import os.path
-import re
+import time
 
 sg.theme('DarkBlack')
 
 selectBottomCoverColor = (
-    'Black bottom cover', 'White bottom cover', 'Blue bottom cover')
+    'Black', 'White', 'Blue')
 
 selectFuse = (
     '0', '1 (bottom)', '1 (top)', '2')
@@ -65,15 +65,37 @@ RL = Robolink()
 
 robot = RL.Item('UR5e')
 robot.setSpeed(20, 20, 20, 20)
+
 home = RL.Item('Home')
+bottomCoverTarget = RL.Item('Bottom cover')
+fuseTarget = RL.Item('Fuse')
+topCoverTypeTarget = RL.Item('Top Cover Type')
+topCoverColorTarget = RL.Item('Top Cover Color')
+
 robot.MoveJ(home)
 
+def getBottomCover():
+    colorToInt = {
+        "Black": 0,
+        "White": 1,
+        "Blue": 2
+    }
+
+    color = colorToInt[values['SBCC']]
+    approach = bottomCoverTarget.Pose()*transl(-200*color, 0, -100)
+    grip = bottomCoverTarget.Pose()*transl(-200*color, 0, 0)
+    robot.MoveJ(approach)
+    robot.MoveJ(grip)
+    time.sleep(1)
+    #grip
+    robot.MoveJ(approach)
+
+    robot.MoveJ(home)
 
 
-target = RL.Item('Bottom cover')
-approach = target.Pose()*transl(0, -200, 0)
-robot.MoveJ(transl(-200, 0, 0))
-print(target.Pose())
+getBottomCover()
+
+
 #phoneInfo = phone(values['SBCC'], values['SAOF'], values['STCT'], values['STCC'], values['textbox'])
 
 #assemble1 = RL.Item(values['SBCC'])
