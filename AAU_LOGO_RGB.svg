@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.0"
+   width="586.000000pt"
+   height="346.000000pt"
+   viewBox="0 0 586.000000 346.000000"
+   preserveAspectRatio="xMidYMid meet"
+   id="svg142"
+   sodipodi:docname="AAU_LOGO_RGB.svg"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)">
+  <metadata
+     id="metadata148">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs146" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     id="namedview144"
+     showgrid="false"
+     inkscape:zoom="1.6945392"
+     inkscape:cx="390.66667"
+     inkscape:cy="254.2719"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g140" />
+  <g
+     transform="translate(0.000000,346.000000) scale(0.100000,-0.100000)"
+     fill="#000000"
+     stroke="none"
+     id="g140">
+    <path
+       d="M3253 3013 c-99 -160 -230 -226 -548 -277 -88 -14 -190 -31 -226 -37 -131 -21 -287 -107 -390 -215 -96 -102 -94 -96 -93 -274 1 -138 4 -165 27 -243 31 -99 78 -198 131 -272 l36 -50 0 75 c0 169 46 362 117 490 47 84 166 203 265 264 43 26 137 75 210 107 73 33 162 78 198 99 131 79 239 198 282 312 20 54 17 62 -9 21z"
+       id="path98" />
+    <path
+       d="M3306 2965 c-52 -169 -187 -309 -496 -515 -223 -149 -335 -308 -376 -530 -25 -141 -13 -322 29 -449 l22 -65 67 -27 c89 -36 191 -58 302 -66 133 -8 135 -6 76 97 -157 271 -189 509 -98 728 39 94 103 191 217 327 105 126 189 247 225 326 31 68 58 171 54 207 -2 22 -7 16 -22 -33z"
+       id="path100" />
+    <path
+       d="M3382 2955 c-10 -135 -68 -281 -188 -481 -147 -243 -183 -344 -184 -510 0 -174 70 -339 204 -482 72 -76 78 -78 134 -46 75 43 178 130 233 196 l50 61 -85 42 c-161 79 -258 180 -287 297 -29 116 -15 218 61 453 54 167 71 271 67 396 -1 57 -4 91 -5 74z"
+       id="path102" />
+  </g>
+</svg>
