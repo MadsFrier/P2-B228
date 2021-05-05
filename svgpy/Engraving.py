@@ -1,5 +1,6 @@
 from robolink import *    # API to communicate with RoboDK
 from robodk import *      # robodk robotics toolbox
+from svgpy.svg import *
 import cairo
 import sys 
 import os
@@ -17,7 +18,7 @@ TEXT_FILE = 't'
 #--------------------------------------------------------------------------------
 # function definitions:
 
-def EngravingSetup(IMAGE_FILE,TEXT_FILE, isCurved):
+def Setup(IMAGE_FILE,TEXT_FILE, isCurved):
     # delete any frames made in a previous run if any
     image = RDK.Item('Frame Draw')
     if image.Valid() and image.Type() == ITEM_TYPE_FRAME: image.Delete()
@@ -196,7 +197,7 @@ def point3D_2_pose(point, tangent):
     CircleOffset = 28.5             #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers corners   
                                     #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
                                     #The Points that are passed to the zCoord-function are now all positive and fit with the function used in calcZ_coord.
-    return transl(point.x, point.y, calcZ_coordTri(point.y))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
+    return transl(point.x, point.y, -calcZ_coord(point.y - CircleOffset))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
 
 def point2D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
@@ -211,11 +212,4 @@ def calcZ_coord(yCoord):                            #Because we have turned our 
 def calcZ_coordTri(yCoord):                  #A different way to calculate the z-coordinate using the pythogorean theroem         
     zCoord = sqrt(92.5**2 - yCoord**2)-94.5                      
     return zCoord
-#--------------------------------------------------------------------------------
-# Program start
-RDK = Robolink()
-path_stationfile = RDK.getParam('PATH_OPENSTATION')
-from svgpy.svg import *
-RDK.setSimulationSpeed(1)
-EngravingSetup(IMAGE_FILE, TEXT_FILE, True)
 
