@@ -122,12 +122,12 @@ def ImgEngrave(IMAGE_FILE, robot, framedraw, isCurved):
 
 def StrEngrave(TEXT_FILE, robot, framedraw, isCurved):
     # select the file to draw
-    #svgfile = path_stationfile + makeSVG(TEXT_FILE)
+    
     svgfile = path_stationfile + '/' + makeSVG(TEXT_FILE)
     # import the SVG file
     svgdata = svg_load(svgfile) 
 
-    IMAGE_SIZE = Point(SIZE_BOARD[0]/2,SIZE_BOARD[1])   # size of the image in MM
+    IMAGE_SIZE = Point(SIZE_BOARD[0]/4,SIZE_BOARD[1])   # size of the image in MM
     svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
     size_img = svgdata.size_poly()  # returns the size of the current polygon
 
@@ -196,17 +196,21 @@ def point3D_2_pose(point, tangent):
     CircleOffset = 28.5             #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers corners   
                                     #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
                                     #The Points that are passed to the zCoord-function are now all positive and fit with the function used in calcZ_coord.
-    return transl(point.x, point.y, -calcZ_coord(point.y - CircleOffset))*rotz(-tangent.angle()) 
+    return transl(point.x, point.y, calcZ_coordTri(point.y))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
 
 def point2D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
     return transl(point.x, point.y, 0)*rotz(-tangent.angle())
 
 def calcZ_coord(yCoord):                            #Because we have turned our framedraw 90 degrees compared to a conventional Cartesian coord system, the function curves over y instead of x.
-     #zCoord = yCoord*yCoord + 57.6*yCoord + 17.19   #These calculations were found using the cirlce's equation, thIs is only an approximation, but it is very close. It is only an approximation.
+     zCoord = yCoord*yCoord + 57.6*yCoord + 17.19   #These calculations were found using the cirlce's equation, thIs is only an approximation, but it is very close. It is only an approximation.
                                                     #it is an approximation because the denominator of a fraction becomes a sum containing the zCoord, so either a recursion seems neccesary of some significant amount of math to split them apart. 
-     zCoord = sqrt(92.5*92.5 - yCoord^2)#zCoord/176 + 6.4                       
+     zCoord = zCoord/176 + 6.4                       
      return zCoord
+
+def calcZ_coordTri(yCoord):                  #A different way to calculate the z-coordinate using the pythogorean theroem         
+    zCoord = sqrt(92.5**2 - yCoord**2)-94.5                      
+    return zCoord
 #--------------------------------------------------------------------------------
 # Program start
 RDK = Robolink()
