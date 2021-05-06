@@ -1,14 +1,13 @@
 from robolink import *    # API to communicate with RoboDK
 from robodk import *      # robodk robotics toolbox
-from svgpy.svg import *
 import cairo
 import sys 
 import os
 import re
 
 PIXELS_AS_OBJECTS = True    # Set to True to generate PDF or HTML simulations that include the drawn path
-TCP_KEEP_TANGENCY = False    # Set to True to keep the tangency along the path
-SIZE_BOARD = [107, 52]     # Size of the image. The image will be scaled keeping its aspect ratio
+TCP_KEEP_TANGENCY = False   # Set to True to keep the tangency along the path
+SIZE_BOARD = [107, 52]      # Size of the image. The image will be scaled keeping its aspect ratio
 BEZEL_SIZE = 2              #This is used to remove the outer bezel of the cover that will not be engraved
 OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]
 MM_X_PIXEL = 0.1             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
@@ -18,7 +17,7 @@ TEXT_FILE = 't'
 #--------------------------------------------------------------------------------
 # function definitions:
 
-def Setup(IMAGE_FILE,TEXT_FILE, isCurved):
+def EngravingSetup(IMAGE_FILE,TEXT_FILE, isCurved):
     # delete any frames made in a previous run if any
     image = RDK.Item('Frame Draw')
     if image.Valid() and image.Type() == ITEM_TYPE_FRAME: image.Delete()
@@ -197,7 +196,7 @@ def point3D_2_pose(point, tangent):
     CircleOffset = 28.5             #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers corners   
                                     #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
                                     #The Points that are passed to the zCoord-function are now all positive and fit with the function used in calcZ_coord.
-    return transl(point.x, point.y, -calcZ_coord(point.y - CircleOffset))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
+    return transl(point.x, point.y, calcZ_coordTri(point.y))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
 
 def point2D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
@@ -212,4 +211,11 @@ def calcZ_coord(yCoord):                            #Because we have turned our 
 def calcZ_coordTri(yCoord):                  #A different way to calculate the z-coordinate using the pythogorean theroem         
     zCoord = sqrt(92.5**2 - yCoord**2)-94.5                      
     return zCoord
+#--------------------------------------------------------------------------------
+# Program start
+RDK = Robolink()
+path_stationfile = RDK.getParam('PATH_OPENSTATION')
+from svgpy.svg import *
+RDK.setSimulationSpeed(1)
+EngravingSetup(IMAGE_FILE, TEXT_FILE, True)
 
