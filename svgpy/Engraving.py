@@ -1,5 +1,6 @@
 from robolink import *    # API to communicate with RoboDK
 from robodk import *      # robodk robotics toolbox
+import svg
 import cairo
 import sys 
 import os
@@ -17,7 +18,7 @@ TEXT_FILE = 't'
 #--------------------------------------------------------------------------------
 # function definitions:
 
-def EngravingSetup(IMAGE_FILE,TEXT_FILE, isCurved):
+def setup(coverToEngrave, isCurved):
     # delete any frames made in a previous run if any
     image = RDK.Item('Frame Draw')
     if image.Valid() and image.Type() == ITEM_TYPE_FRAME: image.Delete()
@@ -26,28 +27,30 @@ def EngravingSetup(IMAGE_FILE,TEXT_FILE, isCurved):
     EngravingFrame = RDK.Item('Engraving Frame')
     if EngravingFrame.Valid() and EngravingFrame.Type() == ITEM_TYPE_FRAME: EngravingFrame.Delete()
 
-    TopCover = 'Curved Cover' 
-    board_draw = RDK.Item(TopCover)
+    board_draw = coverToEngrave
     
     # get the robot, frame and tool objects
     robot = RDK.ItemUserPick('', ITEM_TYPE_ROBOT)
-    EngravingTool = RDK.Item('Engraving Tool')
-    EngravingFrame = RDK.Item('Frame 5') #RDK.AddFrame('Engraving Frame', EngravingTool)
+    EngravingFrame = RDK.Item('engraving') #RDK.AddFrame('Engraving Frame', EngravingTool)
     #EngravingFrame.setPose(transl(171.867,50.001,249.408))
     #EngravingFrame.setPose(EngravingFrame.Pose()*rotx(3.873)*roty(53.297)*rotz(-3.095))
     #EngravingStart = RDK.AddTarget('Engraving Start',EngravingFrame) #[-145.119000, -56.335383, 102.992642, -110.819712, 54.032459, 47.440227] 
     #robot.setPoseFrame(EngravingFrame)
     if isCurved:
         #EngravingStart.setPose(transl(0,0,-13.110))
-        EngravingStart = RDK.Item('Engraving Start Curved')
+        EngravingStart = RDK.Item('engravingCurved')
     else:
         #EngravingStart.setPose(transl(0,0,-10))
-        EngravingStart = RDK.Item('Engraving Start Flat')
+        EngravingStart = RDK.Item('engravingFlat')
     robot.MoveJ(EngravingStart)
 
     framedraw = RDK.AddFrame('Frame Draw', board_draw)
     framedraw.setVisible(False, True)
-    framedraw.setPose(transl(0,0,2))
+    if isCurved:
+        framedraw.setPose(transl(0,0,2))
+    else:
+        framedraw.setPose(transl(0,0,0))
+
     framedrawAbs = RDK.AddFrame('Frame Draw Abs', framedraw)
     framedrawAbs.setPose(transl(0,0,0))
     framedrawAbs.setParentStatic(RDK.Item('UR5 Base'))
@@ -212,10 +215,4 @@ def calcZ_coordTri(yCoord):                  #A different way to calculate the z
     zCoord = sqrt(92.5**2 - yCoord**2)-94.5                      
     return zCoord
 #--------------------------------------------------------------------------------
-# Program start
-RDK = Robolink()
-path_stationfile = RDK.getParam('PATH_OPENSTATION')
-from svgpy.svg import *
-RDK.setSimulationSpeed(1)
-EngravingSetup(IMAGE_FILE, TEXT_FILE, True)
 
