@@ -22,15 +22,11 @@ TB_0=[1 0 0  0;
        0 0 0  1];
  
  
-%Mini test:
+
 Qtest=[110 90+90 30 -30+90 60 20].*pi/180;
  
 T0_6=cast(UR_5.fkine(Qtest),'like',T6_W)
 TB_W=TB_0*T0_6*T6_W
- 
-%T06target = inv(TB_0)*TB_W*inv(T6_W)
-%transl(-521.411,-256.142,-419.593)*trotz(-146.141*pi/180)*troty(-18.747*pi/180)*trotx(-143.994*pi/180)
-%inv(TB_0)*TB_W*inv(T6_W)
  
 RPY=tr2rpy(TB_W,'zyx')*180/pi;
  
@@ -38,26 +34,13 @@ URpos = [TB_W(1,4) TB_W(2,4) TB_W(3,4) RPY(1) RPY(2) RPY(3)];
  
  
   
- 
- 
-%% Section1
-% Make input
- 
-%TBTtarget = transl(-521.411,-256.142,-419.593)*trotz(-146.141*pi/180)*troty(-18.747*pi/180)*trotx(-143.994*pi/180)
 TBTtarget=TB_W;
 
 
 
-% % % Tranformations matrix fra B til T fra RoboDK %%%%%% for 10, 20, 30....
-% [    -0.786357,    -0.607604,     0.111619,  -521.411309 ;
-%      -0.527587,     0.566511,    -0.633022,  -256.142081 ;
-%       0.321394,    -0.556670,    -0.766044,  -419.593026 ;
-%       0.000000,     0.000000,     0.000000,     1.000000 ];
-
- 
 %% Inverse kinamatics
  
-%% Set basic data:
+
  
 TB0=[1 0 0  0;
       0 1 0  0;
@@ -75,11 +58,7 @@ TWT=eulerZYX2T(0,0,0,0,0,0);
  
 %% compute To6target
 T06target = inv(TB0)*TBTtarget*inv(TWT);
-% T06target =[T06targetp(1,1)  T06targetp(1,2)   T06targetp(1,3)  T06targetp(1,4);
-%           T06targetp(2,1)    T06targetp(2,2)   T06targetp(2,3)  T06targetp(2,4);
-%           T06targetp(3,1)    T06targetp(3,2)   T06targetp(3,3)  T06targetp(3,4);
-%            0                       0                0                1.0000];
-%  
+
 %% compute theta1
 P05=T06target*[0;0;-82;1];
 phi1=atan2(P05(2),P05(1));
@@ -104,10 +83,6 @@ T54 = inv(T45);
 T65 = inv(T56);
  
 T14 = T10*T06target*inv(T6W)*T65*T54;
-% T14=[T14p(1,1)    T14p(1,2)   T14p(1,3)  T14p(1,4);
-%      T14p(2,1)    T14p(2,2)   T14p(2,3)  T14p(2,4);
-%      T14p(3,1)    T14p(3,2)   T14p(3,3)  T14p(3,4);
-%          0          0           0          1.0000]
 K1= 425;
 K2= 392.430;
 K3 = sqrt(T14(1,4)^2+T14(3,4)^2);
@@ -121,8 +96,6 @@ phi4 = asin((-K1*sin(theta3))/K3);
 
 theta2=phi3-phi4;
 
-
-% theta2 = atan2(-T14(3,4),-T14(1,4))-asin((-K1*sin(theta3))/K3)
 
 
 % Calculating theta4
