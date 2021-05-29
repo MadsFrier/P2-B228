@@ -1,6 +1,5 @@
 from robolink import *
 from robodk import *
-
 from .svg import *
 import cairo
 import sys 
@@ -9,10 +8,8 @@ import re
 
 SIZE_BOARD = [107, 45]      # Size of the image. The image will be scaled keeping its aspect ratio
 BEZEL_SIZE =  6             #This is used to remove the outer bezel of the cover that will not be engraved
-OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]
+OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]     #We will need the center of the image, we can find it using the size of the image. As we will scale the image to the cover
 MM_X_PIXEL = 0.4             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
-IMAGE_FILE = '/World map.svg'# Path of the SVG image, it can be relative to the current RL station
-TEXT_FILE = 't'
 RL = Robolink()
 
 #--------------------------------------------------------------------------------
@@ -53,7 +50,7 @@ def setup(coverToEngrave, isCurved):
 
     framedrawAbs = RL.AddFrame('Frame Draw Abs', framedraw)
     if isCurved:
-        framedrawAbs.setPose(transl(0,0,-22.5))
+        framedrawAbs.setPose(transl(0,0,-26.5))
     else:
         framedrawAbs.setPose(transl(0,0,-21))
     framedrawAbs.setParentStatic(RL.Item('UR5 Base'))
@@ -75,9 +72,6 @@ def ImgEngrave(IMAGE_FILE, robot, isCurved):
     svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
     size_img = svgdata.size_poly()  # returns the size of the current polygon
 
-    #We will need the center of the image, we can find it using the size of the image.
-    #As we will scale the image to the cover
-
     #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
     #Between each path a approach point is made.
     APPROACH = 10  # approach distance in MM for each path
@@ -89,34 +83,34 @@ def ImgEngrave(IMAGE_FILE, robot, isCurved):
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
         if isCurved:
-            p_0Z = -4+calcZ_coord(-p_0.y)
+            p_0Z = calcZ_coord(-p_0.y)
         else:
             p_0Z = 0
-        #target0 = transl(-p_0.x - 2*OffsetToCenter[0], -p_0.y- OffsetToCenter[1], p_0Z)*rotz(-pi/2)
-        #target0_app = target0*transl(0,0,-APPROACH)
+        target0 = transl(-p_0.x + OffsetToCenter[0], -p_0.y + OffsetToCenter[1], p_0Z)*rotz(-pi/2)
+        target0_app = target0*transl(0,0,-APPROACH)
         framedraw = RL.Item('Frame Draw')
         framedrawAbs = RL.Item('Frame Draw Abs')
         #AddTarget0 = RL.AddTarget('Target0', framedrawAbs)
         #AddTarget0.setPose(target0)
         #AddTarget_app = RL.AddTarget('App', framedrawAbs)
         #AddTarget_app.setPose(target0_app)
-        #robot.MoveL(target0_app)
-        #robot.MoveL(target0)
+        robot.MoveL(target0_app)
+        robot.MoveL(target0)
         
         for i in range(np):
             p_i = path.getPoint(i)
             p_i.x = p_i.x - OffsetToCenter[0]
-            p_i.y = -p_i.y + OffsetToCenter[1]
+            p_i.y = p_i.y - OffsetToCenter[1]
             v_i = path.getVector(i)
             
             if isCurved:
-                p_iZ = -4+calcZ_coord(-p_i.y- 28.5)
+                p_iZ = calcZ_coord(-p_i.y)
                 pt_pose = point3D_2_pose(p_i, v_i)
             else:
                 p_iZ = 0
                 pt_pose = point2D_2_pose(p_i, v_i)
                 
-            target = transl(-p_i.x, -p_i.y, p_iZ)*rotz(-pi/2)
+            target = transl(-p_i.x , -p_i.y , p_iZ)*rotz(-pi/2)
             #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
             #AddTarget.setPose(target)
             # Move the robot to the next target
@@ -142,13 +136,13 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
     APPROACH = 10  # approach distance in MM for each path
 
     for path in svgdata:
-    
+        
         np = path.nPoints()
-            
+        
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
         if isCurved:
-            p_0Z = -4+calcZ_coord(-p_0.y)
+            p_0Z = calcZ_coord(-p_0.y)
         else:
             p_0Z = 0
         target0 = transl(p_0.x + OffsetToCenter[0], p_0.y, p_0Z)*rotz(-pi/2)
@@ -165,12 +159,13 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
         for i in range(np):
             p_i = path.getPoint(i)
             p_i.x = -p_i.x - OffsetToCenter[0]
-            p_i.y = -p_i.y #+ OffsetToCenter[1] - OffsetToCenter[1]
+            p_i.y = -p_i.y 
             v_i = path.getVector(i)
             
             if isCurved:
-                p_iZ = -4+calcZ_coord(-p_i.y- 28.5)
+                p_iZ = calcZ_coord(-p_i.y- 28.5)
                 pt_pose = point3D_2_pose(p_i, v_i)
+                
             else:
                 p_iZ = 0
                 pt_pose = point2D_2_pose(p_i, v_i)
