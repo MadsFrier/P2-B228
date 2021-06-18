@@ -17,12 +17,7 @@ RL = Robolink()
 
 def setup(coverToEngrave, isCurved):
     # delete any frames made in a previous run if any 
-    image = RL.Item('Frame Draw')
-    if image.Valid() and image.Type() == ITEM_TYPE_FRAME: image.Delete()
-    targetFrame = RL.Item('Frame Draw Abs')
-    if targetFrame.Valid() and targetFrame.Type() == ITEM_TYPE_FRAME: targetFrame.Delete()
-    EngravingFrame = RL.Item('Engraving Frame')
-    if EngravingFrame.Valid() and EngravingFrame.Type() == ITEM_TYPE_FRAME: EngravingFrame.Delete()
+   
 
     board_draw = coverToEngrave
     
@@ -40,17 +35,17 @@ def setup(coverToEngrave, isCurved):
     #robot.MoveJ(EngravingStart.Pose()*transl(0,0,-15))
     robot.MoveL(EngravingStart)
 
-    framedraw = RL.AddFrame('Frame Draw', EngravingFrame)
+    framedraw = RL.AddFrame('Frame Draw', board_draw)
     framedraw.setVisible(True, True)
     if isCurved:
-        framedraw.setPose(transl(0,0,1.5)*rotz(pi/2))
+        framedraw.setPose(transl(30,15,54.500)*rotz(90*pi/180)*roty(90*pi/180))
     else:
         framedraw.setPose(transl(0,0,1)*rotz(pi/2))
     framedraw.setParentStatic(board_draw)
 
     framedrawAbs = RL.AddFrame('Frame Draw Abs', framedraw)
     if isCurved:
-        framedrawAbs.setPose(transl(0,0,-26.5))
+        framedrawAbs.setPose(transl(0,0,-23.5))
     else:
         framedrawAbs.setPose(transl(0,0,-21))
     framedrawAbs.setParentStatic(RL.Item('UR5 Base'))
@@ -83,11 +78,11 @@ def ImgEngrave(IMAGE_FILE, robot, isCurved):
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
         if isCurved:
-            p_0Z = calcZ_coord(-p_0.y)
+            p_0Z = calcZ_coordTri(p_0.y)
         else:
             p_0Z = 0
-        target0 = transl(-p_0.x + OffsetToCenter[0], -p_0.y + OffsetToCenter[1], p_0Z)*rotz(-pi/2)
-        target0_app = target0*transl(0,0,-APPROACH)
+        target0 = transl(-p_0.x + OffsetToCenter[0], -p_0.y + OffsetToCenter[1], -p_0Z)*rotz(-pi/2)
+        target0_app = target0*transl(0,0, APPROACH)
         framedraw = RL.Item('Frame Draw')
         framedrawAbs = RL.Item('Frame Draw Abs')
         #AddTarget0 = RL.AddTarget('Target0', framedrawAbs)
@@ -104,13 +99,13 @@ def ImgEngrave(IMAGE_FILE, robot, isCurved):
             v_i = path.getVector(i)
             
             if isCurved:
-                p_iZ = calcZ_coord(-p_i.y)
+                p_iZ = calcZ_coordTri(p_i.y)
                 pt_pose = point3D_2_pose(p_i, v_i)
             else:
                 p_iZ = 0
                 pt_pose = point2D_2_pose(p_i, v_i)
                 
-            target = transl(-p_i.x , -p_i.y , p_iZ)*rotz(-pi/2)
+            target = transl(-p_i.x , -p_i.y , -p_iZ)*rotz(-pi/2)
             #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
             #AddTarget.setPose(target)
             # Move the robot to the next target
@@ -142,7 +137,7 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
         if isCurved:
-            p_0Z = calcZ_coord(-p_0.y)
+            p_0Z = calcZ_coordTri(p_0.y)
         else:
             p_0Z = 0
         target0 = transl(p_0.x + OffsetToCenter[0], p_0.y, p_0Z)*rotz(-pi/2)
@@ -163,14 +158,14 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             v_i = path.getVector(i)
             
             if isCurved:
-                p_iZ = calcZ_coord(-p_i.y- 28.5)
+                p_iZ = calcZ_coordTri(p_i.y)
                 pt_pose = point3D_2_pose(p_i, v_i)
                 
             else:
                 p_iZ = 0
                 pt_pose = point2D_2_pose(p_i, v_i)
                 
-            target = transl(-p_i.x, -p_i.y, p_iZ)*rotz(-pi/2)
+            target = transl(-p_i.x, -p_i.y, -p_iZ)*rotz(-pi/2)
             #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
             #AddTarget.setPose(target)
             # Move the robot to the next target
@@ -195,21 +190,15 @@ def makeSVG(TEXT_FILE):
 
 def point3D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
-    CircleOffset = 28.5             #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers corners   
-                                    #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
-                                    #The Points that are passed to the zCoord-function are now all positive and fit with the function used in calcZ_coord.
-    return transl(point.x, point.y, 1.1+calcZ_coordTri(point.y))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
+       #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers top   
+       #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
+ 
+    return transl(point.x, point.y, calcZ_coordTri(point.y))*rotz(-tangent.angle())
 
 def point2D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
     return transl(point.x, point.y, 0)*rotz(-tangent.angle())
 
-def calcZ_coord(yCoord):                            #Because we have turned our framedraw 90 degrees compared to a conventional Cartesian coord system, the function curves over y instead of x.
-     zCoord = yCoord*yCoord + 57.6*yCoord + 17.19   #These calculations were found using the cirlce's equation, thIs is only an approximation, but it is very close. It is only an approximation.
-                                                    #it is an approximation because the denominator of a fraction becomes a sum containing the zCoord, so either a recursion seems neccesary of some significant amount of math to split them apart. 
-     zCoord = zCoord/176 + 6.4                       
-     return zCoord
-
-def calcZ_coordTri(yCoord):                  #A different way to calculate the z-coordinate using the pythogorean theroem         
-    zCoord = sqrt(92.5**2 - yCoord**2)-94.5                      
+def calcZ_coordTri(yCoord):                  #calculating the z-coordinate using the pythogorean theroem         
+    zCoord = sqrt(92.5**2 - yCoord**2)-92.5                      
     return zCoord
