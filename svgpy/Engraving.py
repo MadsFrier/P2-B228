@@ -9,9 +9,9 @@ import re
 SIZE_BOARD = [107, 45]      # Size of the image. The image will be scaled keeping its aspect ratio
 BEZEL_SIZE =  6             #This is used to remove the outer bezel of the cover that will not be engraved
 OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]     #We will need the center of the image, we can find it using the size of the image. As we will scale the image to the cover
-MM_X_PIXEL = 0.4             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
+MM_X_PIXEL = 0.01             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
 RL = Robolink()
-
+pixel_ref = RL.Item('Cylinder')
 #--------------------------------------------------------------------------------
 # function definitions:
 
@@ -40,21 +40,21 @@ def setup(coverToEngrave, isCurved):
     if isCurved:
         framedraw.setPose(transl(30,15,54.500)*rotz(90*pi/180)*roty(90*pi/180))
     else:
-        framedraw.setPose(transl(0,0,1)*rotz(pi/2))
+        framedraw.setPose(transl(30,11.8,54.500)*rotz(90*pi/180)*roty(90*pi/180))
     framedraw.setParentStatic(board_draw)
 
     framedrawAbs = RL.AddFrame('Frame Draw Abs', framedraw)
     if isCurved:
         framedrawAbs.setPose(transl(0,0,-23.5))
     else:
-        framedrawAbs.setPose(transl(0,0,-21))
+        framedrawAbs.setPose(transl(0,0,-22.3))
     framedrawAbs.setParentStatic(RL.Item('UR5 Base'))
     robot.setPoseFrame(framedrawAbs)
     tooldraw = RL.Item('Gripper')
 
     # get the pixel reference to draw
-    pixel_ref = RL.Item('Cylinder')
-    pixel_ref.Copy()
+    
+    
     return 0
     
 def ImgEngrave(IMAGE_FILE, robot, isCurved):
@@ -134,8 +134,12 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
         
         np = path.nPoints()
         
+        pixel_ref.Recolor([0,0,0])
+        pixel_ref.Copy()
+
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
+
         if isCurved:
             p_0Z = calcZ_coordTri(p_0.y)
         else:
@@ -157,6 +161,18 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             p_i.y = -p_i.y 
             v_i = path.getVector(i)
             
+            v_prev = path.getVector(i-1)
+            AngleDif = path.getVector(i).angle() - path.getVector(i-1).angle()
+
+            if abs(AngleDif) > pi/4:
+               pixel_ref.Recolor([1,0,0]) #([0,0,0,1])
+               pixel_ref.Copy()
+
+            else: 
+                pixel_ref.Recolor([0,0,0]) #([0,0,0,1])
+                pixel_ref.Copy()
+             
+
             if isCurved:
                 p_iZ = calcZ_coordTri(p_i.y)
                 pt_pose = point3D_2_pose(p_i, v_i)
