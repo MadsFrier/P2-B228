@@ -1,3 +1,24 @@
+%% Startup rutine
+
+clc
+close
+clear
+
+% global robot
+
+% Generate a Robolink object RDK. This object interfaces with RoboDK.
+RDK = Robolink;
+
+% Display the list of all items in the main tree
+fprintf('Available items in the station:\n');
+disp(RDK.ItemList());
+
+robot = RDK.ItemUserPick('Select one robot', RDK.ITEM_TYPE_ROBOT);
+
+if robot.Valid() == 0
+    error('No robot selected');
+end
+
 L1=Link('d',0,'a',0,'alpha',0,'modified')
 L2=Link('d',0,'a',0,'alpha',90*pi/180,'offset',90/180*pi,'modified')
 L3=Link('d',0,'a',425,'alpha',0,'modified')

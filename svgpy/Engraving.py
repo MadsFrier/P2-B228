@@ -9,7 +9,7 @@ import re
 SIZE_BOARD = [107, 45]      # Size of the image. The image will be scaled keeping its aspect ratio
 BEZEL_SIZE =  6             #This is used to remove the outer bezel of the cover that will not be engraved
 OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]     #We will need the center of the image, we can find it using the size of the image. As we will scale the image to the cover
-MM_X_PIXEL = 0.01             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
+MM_X_PIXEL = 0.15             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
 RL = Robolink()
 pixel_ref = RL.Item('Cylinder')
 #--------------------------------------------------------------------------------
@@ -17,31 +17,27 @@ pixel_ref = RL.Item('Cylinder')
 
 def setup(coverToEngrave, isCurved):
     # delete any frames made in a previous run if any 
-   
 
     board_draw = coverToEngrave
     
     # get the robot, frame and tool objects
     robot = RL.Item('UR5')
 
-    #engravingTool = robot.setPoseTool(transl(0,0,159))
-    EngravingFrame = RL.Item('engraving') #RL.AddFrame('Engraving Frame', EngravingTool)
+    EngravingFrame = RL.Item('engraving') 
     robot.setPoseFrame(EngravingFrame)
     if isCurved:
-        EngravingStart = RL.Item('engravingCurved')# [45.670000, -133.090000, -77.160000, -101.550000, 237.910000, 31.500000]
+        EngravingStart = RL.Item('engravingCurved')
     else:
         EngravingStart = RL.Item('engravingFlat')
-    #robot.MoveJ(EngravingStart.Pose()*transl(100,0,-15))
-    #robot.MoveJ(EngravingStart.Pose()*transl(0,0,-15))
     robot.MoveL(EngravingStart)
 
+    #Make the frame for the drawing
     framedraw = RL.AddFrame('Frame Draw', board_draw)
     framedraw.setVisible(True, True)
     if isCurved:
         framedraw.setPose(transl(30,15,54.500)*rotz(90*pi/180)*roty(90*pi/180))
     else:
         framedraw.setPose(transl(30,11.8,54.500)*rotz(90*pi/180)*roty(90*pi/180))
-    framedraw.setParentStatic(board_draw)
 
     framedrawAbs = RL.AddFrame('Frame Draw Abs', framedraw)
     if isCurved:
@@ -50,10 +46,10 @@ def setup(coverToEngrave, isCurved):
         framedrawAbs.setPose(transl(0,0,-22.3))
     framedrawAbs.setParentStatic(RL.Item('UR5 Base'))
     robot.setPoseFrame(framedrawAbs)
-    tooldraw = RL.Item('Gripper')
 
     # get the pixel reference to draw
-    
+    pixel_ref.Recolor([0,0,0])
+    pixel_ref.Copy()
     
     return 0
     
@@ -134,8 +130,7 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
         
         np = path.nPoints()
         
-        pixel_ref.Recolor([0,0,0])
-        pixel_ref.Copy()
+        segment = path.getPath()._segments
 
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
@@ -152,7 +147,7 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
         #AddTarget0.setPose(target0)
         #AddTarget_app = RL.AddTarget('App', framedrawAbs)
         #AddTarget_app.setPose(target0_app)
-        robot.MoveL(target0_app)
+        #robot.MoveL(target0_app)
         #robot.MoveL(target0)
         
         for i in range(np):
@@ -161,13 +156,13 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             p_i.y = -p_i.y 
             v_i = path.getVector(i)
             
-            v_prev = path.getVector(i-1)
-            AngleDif = path.getVector(i).angle() - path.getVector(i-1).angle()
-
-            if abs(AngleDif) > pi/4:
+            #Check if the point is a turning point by checking angles before and after
+            if abs(path.getVector(i).angle() - path.getVector(i-1).angle()) > pi/146 and abs(path.getVector(i).angle() - path.getVector(i+1).angle()) > pi/146:
                pixel_ref.Recolor([1,0,0]) #([0,0,0,1])
                pixel_ref.Copy()
-
+               if abs(path.getVector(i-1).angle() - path.getVector(i-2).angle()) > pi/146 or abs(path.getVector(i+1).angle() - path.getVector(i+2).angle()) > pi/146:
+                  pixel_ref.Recolor([0,0,1])
+                  pixel_ref.Copy()
             else: 
                 pixel_ref.Recolor([0,0,0]) #([0,0,0,1])
                 pixel_ref.Copy()
@@ -185,8 +180,9 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
             #AddTarget.setPose(target)
             # Move the robot to the next target
-            robot.MoveL(target)
+            #robot.MoveL(target)
             framedraw.Paste().setPose(pt_pose)
+            #pixel.setName('%s'%path.getVector(i).angle())
         pathEnd = target*transl(0,0,-APPROACH)
         robot.MoveJ(pathEnd)
     return 0
@@ -197,7 +193,7 @@ def makeSVG(TEXT_FILE):
         Context = cairo.Context(surface) # creating a cairo context object for SVG surface # useing Context method	
         Context.set_source_rgb(1, 0, 0) # setting color of the context
         Context.set_font_size(50)# approximate text height
-        Context.select_font_face("Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # Font Style
+        Context.select_font_face("Purisa", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # Font Style
         Context.move_to(35, 45) # position for the text
         Context.text_path(TEXT_FILE) # displays the text
         Context.set_line_width(2)# Width of outline

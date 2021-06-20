@@ -80,6 +80,10 @@ class Path_feature():
         '''Returns the number of points in the path polygon'''
         return len(self.poly_vertex)
 
+    def getPath(self): 
+        '''This should give access to the path used'''
+        return self.path
+
     def getPoint(self,i):
         '''Returns the number of points in the path polygon'''
         #return Point(self.poly_vertex[i].real, self.poly_vertex[i].imag).switchXY()
