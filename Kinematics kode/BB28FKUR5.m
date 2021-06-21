@@ -40,21 +40,21 @@ T6_W=[-1 0 0  0;
        0 0 0  1];
  
  
-%Mini test:
- 
-Qtest=[10 20+90 30 40+90 50 60].*pi/180
- 
-T0_6=cast(UR_5.fkine(Qtest),'like',T6_W)
-TB_W=TB_0*T0_6*T6_W
- 
-%Transfor to angle axis (theta+K)
-theta = acos((TB_W(1,1)+TB_W(2,2)+TB_W(3,3)-1)/2)
-if (abs(theta) < 0.000001)
-    K = [0;0;0];
-else
-    K=1/(2*sin(theta))*[TB_W(3,2)-TB_W(2,3);TB_W(1,3)-TB_W(3,1);TB_W(2,1)-TB_W(1,2)]
-end
- 
-UROri = [K(1)*theta*180/pi K(2)*theta*180/pi K(3)*theta*180/pi]
- 
-URpos = [TB_W(1,4) TB_W(2,4) TB_W(3,4) UROri(1) UROri(2) UROri(3)]
+%RDK test
+TestAngles = [90 60 40 20 0 0 ];
+Qtest= (TestAngles + [0 90 0 90 0 0]).*pi/180;
+robot.MoveJ(TestAngles);
+pose = robot.Pose();
+eul = tform2eul(robot.Pose(), 'zyx').*180/pi;
+RDKPose = [pose(1,4) pose(2,4) pose(3,4) eul(1) eul(2) eul(3)]
+
+%Matlab test
+T0_6=cast(UR_5.fkine(Qtest),'like',T6_W);
+TB_W=TB_0*T0_6*T6_W;
+eul = tform2eul(TB_W, 'zyx').*180/pi;
+CalcPose = [TB_W(1,4) TB_W(2,4) TB_W(3,4) eul(1) eul(2) eul(3)]
+
+distance = 0;
+for i = length(CalcPose) 
+    distance = distance + (CalcPose(i)- RDKPose(i))^2
+end 

@@ -9,7 +9,7 @@ import re
 SIZE_BOARD = [107, 45]      # Size of the image. The image will be scaled keeping its aspect ratio
 BEZEL_SIZE =  6             #This is used to remove the outer bezel of the cover that will not be engraved
 OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]     #We will need the center of the image, we can find it using the size of the image. As we will scale the image to the cover
-MM_X_PIXEL = 0.07             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
+MM_X_PIXEL = 0.07             # in mm. The path will be cut depending on the pixel size.
 RL = Robolink()
 pixel_ref = RL.Item('Cylinder')
 #--------------------------------------------------------------------------------
@@ -140,6 +140,7 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             p_0Z = calcZ_coordTri(p_0.y)
         else:
             p_0Z = 0
+
         target0 = transl(p_0.x + OffsetToCenter[0], p_0.y, p_0Z)*rotz(-pi/2)
         target0_app = target0*transl(0,0,-APPROACH)
         framedraw = RL.Item('Frame Draw')
@@ -148,18 +149,22 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
         #AddTarget0.setPose(target0)
         #AddTarget_app = RL.AddTarget('App', framedrawAbs)
         #AddTarget_app.setPose(target0_app)
-        #robot.MoveL(target0_app)
-        #robot.MoveL(target0)
+        robot.MoveL(target0_app)
+        robot.MoveL(target0)
         
+        TextOffset  = 1.5*len(TEXT_FILE) # we want to center the text, the average width of a letter is roughly 3 mm's
+                                         # since we want to center it the offset should be half the length of the text
+                                           
+
         for i in range(np):
             p_i = path.getPoint(i)
             p_i.x = -p_i.x - OffsetToCenter[0]
-            p_i.y = -p_i.y 
+            p_i.y = -p_i.y + TextOffset
             v_i = path.getVector(i)
 
             p_prev = path.getPoint(i-1)
             p_prev.x = -p_prev.x - OffsetToCenter[0]
-            p_prev.y = -p_prev.y 
+            p_prev.y = -p_prev.y + TextOffset
             v_prev = path.getVector(i-1)
 
             Critpoints = []
@@ -178,17 +183,18 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             else: 
                 pixel_ref.Recolor([0,0,0]) #([0,0,0,1])
                 pixel_ref.Copy()
-             
+                
             if isCurved:
                p_iZ = calcZ_coordTri(p_i.y)
                pt_pose = point3D_2_pose(p_i, v_i)
-                
+               
             else:
                 p_iZ = 0
                 pt_pose = point2D_2_pose(p_i, v_i)
                 
             EucDis = sqrt((p_i.x - p_prev.x)**2+(p_i.y - p_prev.y)**2)
-            if EucDis > 2*MM_X_PIXEL:
+
+            if EucDis > 0.4+MM_X_PIXEL: #Most distances are slightly above MM_X_PIXEL, 
                robot.MoveJ(transl(-p_prev.x, -p_prev.y, -APPROACH)*rotz(-pi/2)) #makes a leave point for the current target
                robot.MoveJ(transl(-p_i.x, -p_i.y, -APPROACH)*rotz(-pi/2)) #makes an approach point for the next target.
 
@@ -201,6 +207,8 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             pixel.setPose(pt_pose)
             pixel.setName('%s'%EucDis)
         pathEnd = target*transl(0,0,-APPROACH)
+        pixel.Recolor([1,0,0])
+        Critpoints.append(i)
         robot.MoveJ(pathEnd)
     return 0
 
@@ -210,7 +218,7 @@ def makeSVG(TEXT_FILE):
         Context = cairo.Context(surface) # creating a cairo context object for SVG surface # useing Context method	
         Context.set_source_rgb(1, 0, 0) # setting color of the context
         Context.set_font_size(50)# approximate text height
-        Context.select_font_face("Purisa", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # Font Style
+        Context.select_font_face("Comic Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # Font Style
         Context.move_to(35, 45) # position for the text
         Context.text_path(TEXT_FILE) # displays the text
         Context.set_line_width(2)# Width of outline
