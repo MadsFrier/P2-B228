@@ -218,7 +218,7 @@ def makeSVG(TEXT_FILE):
         Context = cairo.Context(surface) # creating a cairo context object for SVG surface # useing Context method	
         Context.set_source_rgb(1, 0, 0) # setting color of the context
         Context.set_font_size(50)# approximate text height
-        Context.select_font_face("Comic Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # Font Style
+        Context.select_font_face("Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL) # Font Style
         Context.move_to(35, 45) # position for the text
         Context.text_path(TEXT_FILE) # displays the text
         Context.set_line_width(2)# Width of outline

@@ -19,12 +19,12 @@ if robot.Valid() == 0
     error('No robot selected');
 end
 
-L1=Link('d',0,'a',0,'alpha',0,'modified')
-L2=Link('d',0,'a',0,'alpha',90*pi/180,'offset',90/180*pi,'modified')
-L3=Link('d',0,'a',425,'alpha',0,'modified')
-L4=Link('d',109,'a',392.430,'alpha',0,'offset',-90/180*pi,'modified')
-L5=Link('d',93.65,'a',0,'alpha',-90*pi/180,'modified')
-L6=Link('d',0,'a',0,'alpha',90*pi/180,'modified')
+L1=Link('d',0,'a',0,'alpha',0,'modified');
+L2=Link('d',0,'a',0,'alpha',90*pi/180,'offset',90/180*pi,'modified');
+L3=Link('d',0,'a',425,'alpha',0,'modified');
+L4=Link('d',109,'a',392.430,'alpha',0,'offset',-90/180*pi,'modified');
+L5=Link('d',93.65,'a',0,'alpha',-90*pi/180,'modified');
+L6=Link('d',0,'a',0,'alpha',90*pi/180,'modified');
  
 UR_5=SerialLink([L1 L2 L3 L4 L5 L6],'name','UR5');
  
@@ -41,7 +41,7 @@ T6_W=[-1 0 0  0;
  
  
 %RDK test
-TestAngles = [90 60 40 20 0 0 ];
+TestAngles = [11 22 33 44 55 66];
 Qtest= (TestAngles + [0 90 0 90 0 0]).*pi/180;
 robot.MoveJ(TestAngles);
 pose = robot.Pose();
