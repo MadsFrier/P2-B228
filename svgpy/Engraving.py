@@ -1,142 +1,71 @@
-from robolink import *    # API to communicate with RoboDK
-from robodk import *      # robodk robotics toolbox
-import svg
+from robolink import *
+from robodk import *
+from .svg import *
 import cairo
 import sys 
 import os
 import re
 
-PIXELS_AS_OBJECTS = True    # Set to True to generate PDF or HTML simulations that include the drawn path
-TCP_KEEP_TANGENCY = False   # Set to True to keep the tangency along the path
-SIZE_BOARD = [107, 52]      # Size of the image. The image will be scaled keeping its aspect ratio
-BEZEL_SIZE = 2              #This is used to remove the outer bezel of the cover that will not be engraved
-OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]
-MM_X_PIXEL = 0.1             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
-IMAGE_FILE = '/World map.svg'# Path of the SVG image, it can be relative to the current RDK station
-TEXT_FILE = 't'
-
+SIZE_BOARD = [107, 45]      # Size of the image. The image will be scaled keeping its aspect ratio
+BEZEL_SIZE =  6             #This is used to remove the outer bezel of the cover that will not be engraved
+OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]     #We will need the center of the image, we can find it using the size of the image. As we will scale the image to the cover
+MM_X_PIXEL = 0.07             # in mm. The path will be cut depending on the pixel size.
+RL = Robolink()
+pixel_ref = RL.Item('Cylinder')
 #--------------------------------------------------------------------------------
 # function definitions:
 
 def setup(coverToEngrave, isCurved):
-    # delete any frames made in a previous run if any
-    image = RDK.Item('Frame Draw')
-    if image.Valid() and image.Type() == ITEM_TYPE_FRAME: image.Delete()
-    targetFrame = RDK.Item('Frame Draw Abs')
-    if targetFrame.Valid() and targetFrame.Type() == ITEM_TYPE_FRAME: targetFrame.Delete()
-    EngravingFrame = RDK.Item('Engraving Frame')
-    if EngravingFrame.Valid() and EngravingFrame.Type() == ITEM_TYPE_FRAME: EngravingFrame.Delete()
+    # delete any frames made in a previous run if any 
 
     board_draw = coverToEngrave
     
     # get the robot, frame and tool objects
-    robot = RDK.ItemUserPick('', ITEM_TYPE_ROBOT)
-    EngravingFrame = RDK.Item('engraving') #RDK.AddFrame('Engraving Frame', EngravingTool)
-    #EngravingFrame.setPose(transl(171.867,50.001,249.408))
-    #EngravingFrame.setPose(EngravingFrame.Pose()*rotx(3.873)*roty(53.297)*rotz(-3.095))
-    #EngravingStart = RDK.AddTarget('Engraving Start',EngravingFrame) #[-145.119000, -56.335383, 102.992642, -110.819712, 54.032459, 47.440227] 
-    #robot.setPoseFrame(EngravingFrame)
-    if isCurved:
-        #EngravingStart.setPose(transl(0,0,-13.110))
-        EngravingStart = RDK.Item('engravingCurved')
-    else:
-        #EngravingStart.setPose(transl(0,0,-10))
-        EngravingStart = RDK.Item('engravingFlat')
-    robot.MoveJ(EngravingStart)
+    robot = RL.Item('UR5')
 
-    framedraw = RDK.AddFrame('Frame Draw', board_draw)
-    framedraw.setVisible(False, True)
+    EngravingFrame = RL.Item('engraving') 
+    robot.setPoseFrame(EngravingFrame)
     if isCurved:
-        framedraw.setPose(transl(0,0,2))
+        EngravingStart = RL.Item('engravingCurved')
     else:
-        framedraw.setPose(transl(0,0,0))
+        EngravingStart = RL.Item('engravingFlat')
+    robot.MoveL(EngravingStart)
 
-    framedrawAbs = RDK.AddFrame('Frame Draw Abs', framedraw)
-    framedrawAbs.setPose(transl(0,0,0))
-    framedrawAbs.setParentStatic(RDK.Item('UR5 Base'))
+    #Make the frame for the drawing
+    framedraw = RL.AddFrame('Frame Draw', board_draw)
+    framedraw.setVisible(True, True)
+    if isCurved:
+        framedraw.setPose(transl(30,15,54.500)*rotz(90*pi/180)*roty(90*pi/180))
+    else:
+        framedraw.setPose(transl(30,11.8,54.500)*rotz(90*pi/180)*roty(90*pi/180))
+
+    framedrawAbs = RL.AddFrame('Frame Draw Abs', framedraw)
+    if isCurved:
+        framedrawAbs.setPose(transl(0,0,-23.5))
+    else:
+        framedrawAbs.setPose(transl(0,0,-22.3))
+    framedrawAbs.setParentStatic(RL.Item('UR5 Base'))
     robot.setPoseFrame(framedrawAbs)
-    tooldraw = RDK.Item('Gripper')
 
     # get the pixel reference to draw
-    pixel_ref = RDK.Item('Cylinder')
+    pixel_ref.Recolor([0,0,0])
     pixel_ref.Copy()
-    #ImgEngrave(IMAGE_FILE, robot, framedraw, isCurved)
-    StrEngrave(TEXT_FILE, robot, framedraw, isCurved)
-    robot.MoveJ(EngravingStart)
+    
     return 0
     
-def ImgEngrave(IMAGE_FILE, robot, framedraw, isCurved):
+def ImgEngrave(IMAGE_FILE, robot, isCurved):
     # select the file to draw
-    svgfile = path_stationfile + IMAGE_FILE
+    #svgfile = path_stationfile + IMAGE_FILE
     # import the SVG file
-    svgdata = svg_load(svgfile)
+    svgdata = svg_load(IMAGE_FILE)
 
     IMAGE_SIZE = Point(SIZE_BOARD[0]/2,SIZE_BOARD[1])   # size of the image in MM
     svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
     size_img = svgdata.size_poly()  # returns the size of the current polygon
 
-    #We will need the center of the image, we can find it using the size of the image.
-    #As we will scale the image to the cover
-
     #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
     #Between each path a approach point is made.
-    APPROACH = 0.2  # approach distance in MM for each path
-
-    for path in svgdata:
-    
-        np = path.nPoints()
-        
-        # robot movement: approach to the first target
-        p_0 = path.getPoint(0)
-        if isCurved:
-                p_0Z = -4+calcZ_coord(-p_0.y)
-        else:
-                p_0Z = 0
-        target0 = transl(p_0.x - OffsetToCenter[0], p_0.y -OffsetToCenter[1], p_0Z)
-        target0_app = target0*transl(0,0,-APPROACH)
-        framedrawAbs = RDK.Item('Frame Draw Abs')
-##        AddTarget = RDK.AddTarget('Target', framedrawAbs)
-##        AddTarget.setPose(target0)
-##        AddTarget_app = RDK.AddTarget('App', framedrawAbs)
-##        AddTarget_app.setPose(target0_app)
-        robot.MoveL(target0_app)
-        robot.MoveL(target0)
-        for i in range(np):
-            p_i = path.getPoint(i)
-            p_i.x = -p_i.x + OffsetToCenter[0]
-            p_i.y = -p_i.y +OffsetToCenter[1]
-            v_i = path.getVector(i)
-            
-            if isCurved:
-                p_iZ = -4+calcZ_coord(-p_i.y - 28.5)
-                pt_pose = point3D_2_pose(p_i, v_i)
-            else:
-                p_iZ = 0
-                pt_pose = point2D_2_pose(p_i, v_i)
-               
-            target = transl(-p_i.x, -p_i.y, p_iZ)
-            #AddTarget = RDK.AddTarget('Engraving Target', framedrawAbs)
-            #AddTarget.setPose(target)
-            # Move the robot to the next target
-            robot.MoveL(target)
-            framedraw.Paste().setPose(pt_pose)
-        pathEnd = target*transl(0,0,-APPROACH)
-    return 0
-
-def StrEngrave(TEXT_FILE, robot, framedraw, isCurved):
-    # select the file to draw
-    
-    svgfile = path_stationfile + '/' + makeSVG(TEXT_FILE)
-    # import the SVG file
-    svgdata = svg_load(svgfile) 
-
-    IMAGE_SIZE = Point(SIZE_BOARD[0]/4,SIZE_BOARD[1])   # size of the image in MM
-    svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
-    size_img = svgdata.size_poly()  # returns the size of the current polygon
-
-    #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
-    #Between each path a approach point is made.
-    APPROACH = 2  # approach distance in MM for each path
+    APPROACH = 10  # approach distance in MM for each path
 
     for path in svgdata:
     
@@ -145,44 +74,146 @@ def StrEngrave(TEXT_FILE, robot, framedraw, isCurved):
         # robot movement: approach to the first target
         p_0 = path.getPoint(0)
         if isCurved:
-            p_0Z = -4+calcZ_coord(-p_0.y)
+            p_0Z = calcZ_coordTri(p_0.y)
         else:
             p_0Z = 0
-        target0 = transl(p_0.x + OffsetToCenter[0], p_0.y -OffsetToCenter[1], p_0Z)
-        target0_app = target0*transl(0,0,-APPROACH)
-##        framedrawAbs = RDK.Item('Frame Draw Abs')
-##        AddTarget0 = RDK.AddTarget('Target0', framedrawAbs)
-##        AddTarget0.setPose(target0)
-##        AddTarget_app = RDK.AddTarget('App', framedrawAbs)
-##        AddTarget_app.setPose(target0_app)
+        target0 = transl(-p_0.x + OffsetToCenter[0], -p_0.y + OffsetToCenter[1], -p_0Z)*rotz(-pi/2)
+        target0_app = target0*transl(0,0, APPROACH)
+        framedraw = RL.Item('Frame Draw')
+        framedrawAbs = RL.Item('Frame Draw Abs')
+        #AddTarget0 = RL.AddTarget('Target0', framedrawAbs)
+        #AddTarget0.setPose(target0)
+        #AddTarget_app = RL.AddTarget('App', framedrawAbs)
+        #AddTarget_app.setPose(target0_app)
         robot.MoveL(target0_app)
         robot.MoveL(target0)
         
         for i in range(np):
             p_i = path.getPoint(i)
-            p_i.x = -p_i.x - OffsetToCenter[0]
-            p_i.y = -p_i.y + OffsetToCenter[1]
+            p_i.x = p_i.x - OffsetToCenter[0]
+            p_i.y = p_i.y - OffsetToCenter[1]
             v_i = path.getVector(i)
             
             if isCurved:
-                p_iZ = -4+calcZ_coord(-p_i.y- 28.5)
+                p_iZ = calcZ_coordTri(p_i.y)
                 pt_pose = point3D_2_pose(p_i, v_i)
             else:
                 p_iZ = 0
                 pt_pose = point2D_2_pose(p_i, v_i)
                 
-            target = transl(-p_i.x, -p_i.y, p_iZ)
-            #AddTarget = RDK.AddTarget('Engraving Target', framedrawAbs)
+            target = transl(-p_i.x , -p_i.y , -p_iZ)*rotz(-pi/2)
+            #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
             #AddTarget.setPose(target)
             # Move the robot to the next target
             robot.MoveL(target)
             framedraw.Paste().setPose(pt_pose)
         pathEnd = target*transl(0,0,-APPROACH)
+        robot.MoveJ(pathEnd)
+    return 0
+
+def StrEngrave(TEXT_FILE, robot, isCurved):
+    # select the file to draw
+    path_stationfile = RL.getParam('PATH_OPENSTATION')
+    svgfile = path_stationfile + '/' + makeSVG(TEXT_FILE)
+    # import the SVG file
+    svgdata = svg_load(svgfile) 
+
+    IMAGE_SIZE = Point(SIZE_BOARD[0]/16,SIZE_BOARD[1]/4)   # size of the image in MM
+    svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
+    size_img = svgdata.size_poly()  # returns the size of the current polygon
+
+    #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
+    #Between each path a approach point is made.
+    APPROACH = 10  # approach distance in MM for each path
+
+    for path in svgdata:
+        
+        np = path.nPoints()
+        
+        #segment = path.getPath()._segments
+        #print(segment)
+
+        # robot movement: approach to the first target
+        p_0 = path.getPoint(0)
+
+        if isCurved:
+            p_0Z = calcZ_coordTri(p_0.y)
+        else:
+            p_0Z = 0
+
+        target0 = transl(p_0.x + OffsetToCenter[0], p_0.y, p_0Z)*rotz(-pi/2)
+        target0_app = target0*transl(0,0,-APPROACH)
+        framedraw = RL.Item('Frame Draw')
+        framedrawAbs = RL.Item('Frame Draw Abs')
+        #AddTarget0 = RL.AddTarget('Target0', framedrawAbs)
+        #AddTarget0.setPose(target0)
+        #AddTarget_app = RL.AddTarget('App', framedrawAbs)
+        #AddTarget_app.setPose(target0_app)
+        robot.MoveL(target0_app)
+        robot.MoveL(target0)
+        
+        TextOffset  = 1.5*len(TEXT_FILE) # we want to center the text, the average width of a letter is roughly 3 mm's
+                                         # since we want to center it the offset should be half the length of the text
+                                           
+
+        for i in range(np):
+            p_i = path.getPoint(i)
+            p_i.x = -p_i.x - OffsetToCenter[0]
+            p_i.y = -p_i.y + TextOffset
+            v_i = path.getVector(i)
+
+            p_prev = path.getPoint(i-1)
+            p_prev.x = -p_prev.x - OffsetToCenter[0]
+            p_prev.y = -p_prev.y + TextOffset
+            v_prev = path.getVector(i-1)
+
+            Critpoints = []
+            Curvepoints = []
+
+            #Check if the point is a turning point by checking angles before and after
+            if abs(path.getVector(i).angle() - path.getVector(i-1).angle()) > pi/146 and abs(path.getVector(i).angle() - path.getVector(i+1).angle()) > pi/146:
+               pixel_ref.Recolor([1,0,0]) #([0,0,0,1])
+               pixel_ref.Copy()
+               if abs(path.getVector(i-1).angle() - path.getVector(i-2).angle()) > pi/146 or abs(path.getVector(i+1).angle() - path.getVector(i+2).angle()) > pi/146:
+                  pixel_ref.Recolor([0,0,1])
+                  pixel_ref.Copy()
+                  Curvepoints.append(i)
+               else: Critpoints.append(i)
+
+            else: 
+                pixel_ref.Recolor([0,0,0]) #([0,0,0,1])
+                pixel_ref.Copy()
+                
+            if isCurved:
+               p_iZ = calcZ_coordTri(p_i.y)
+               pt_pose = point3D_2_pose(p_i, v_i)
+               
+            else:
+                p_iZ = 0
+                pt_pose = point2D_2_pose(p_i, v_i)
+                
+            EucDis = sqrt((p_i.x - p_prev.x)**2+(p_i.y - p_prev.y)**2)
+
+            if EucDis > 0.4+MM_X_PIXEL: #Most distances are slightly above MM_X_PIXEL, 
+               robot.MoveJ(transl(-p_prev.x, -p_prev.y, -APPROACH)*rotz(-pi/2)) #makes a leave point for the current target
+               robot.MoveJ(transl(-p_i.x, -p_i.y, -APPROACH)*rotz(-pi/2)) #makes an approach point for the next target.
+
+            target = transl(-p_i.x, -p_i.y, -p_iZ)*rotz(-pi/2)
+            #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
+            #AddTarget.setPose(target)
+            # Move the robot to the next target
+            robot.MoveL(target)
+            pixel = framedraw.Paste()
+            pixel.setPose(pt_pose)
+            pixel.setName('%s'%EucDis)
+        pathEnd = target*transl(0,0,-APPROACH)
+        pixel.Recolor([1,0,0])
+        Critpoints.append(i)
+        robot.MoveJ(pathEnd)
     return 0
 
 def makeSVG(TEXT_FILE):
 # creating a SVG surface
-# here geek95 is file name & 700, 700 is dimension
     with cairo.SVGSurface("StrEng.svg", 100, 100) as surface:
         Context = cairo.Context(surface) # creating a cairo context object for SVG surface # useing Context method	
         Context.set_source_rgb(1, 0, 0) # setting color of the context
@@ -196,23 +227,15 @@ def makeSVG(TEXT_FILE):
 
 def point3D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
-    CircleOffset = 28.5             #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers corners   
-                                    #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
-                                    #The Points that are passed to the zCoord-function are now all positive and fit with the function used in calcZ_coord.
-    return transl(point.x, point.y, calcZ_coordTri(point.y))*rotz(-tangent.angle()) #-calcZ_coord(point.y - CircleOffset)
+       #The curved cover is made with a radius of 92.5 mm, with a maximum distance of 4.5mm from the flat plane of the covers top   
+       #This circle offset is the horisontal distance between the cirlce crossing the horisontal axis and the origin, when the circle is translated downwards so that the highest point is 4.5 above the origin
+ 
+    return transl(point.x, point.y, calcZ_coordTri(point.y))*rotz(-tangent.angle())
 
 def point2D_2_pose(point, tangent):
     """Converts a 2D point to a 3D pose in the XY plane including rotation being tangent to the path"""
     return transl(point.x, point.y, 0)*rotz(-tangent.angle())
 
-def calcZ_coord(yCoord):                            #Because we have turned our framedraw 90 degrees compared to a conventional Cartesian coord system, the function curves over y instead of x.
-     zCoord = yCoord*yCoord + 57.6*yCoord + 17.19   #These calculations were found using the cirlce's equation, thIs is only an approximation, but it is very close. It is only an approximation.
-                                                    #it is an approximation because the denominator of a fraction becomes a sum containing the zCoord, so either a recursion seems neccesary of some significant amount of math to split them apart. 
-     zCoord = zCoord/176 + 6.4                       
-     return zCoord
-
-def calcZ_coordTri(yCoord):                  #A different way to calculate the z-coordinate using the pythogorean theroem         
-    zCoord = sqrt(92.5**2 - yCoord**2)-94.5                      
+def calcZ_coordTri(yCoord):                  #calculating the z-coordinate using the pythogorean theroem         
+    zCoord = sqrt(92.5**2 - yCoord**2)-92.5                      
     return zCoord
-#--------------------------------------------------------------------------------
-

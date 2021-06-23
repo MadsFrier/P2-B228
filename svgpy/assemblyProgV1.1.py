@@ -7,10 +7,10 @@ import sys
 import os
 import re
 
-SIZE_BOARD = [114, 60]      # Size of the image. The image will be scaled keeping its aspect ratio
+SIZE_BOARD = [107, 45]      # Size of the image. The image will be scaled keeping its aspect ratio
 BEZEL_SIZE =  6             #This is used to remove the outer bezel of the cover that will not be engraved
 OffsetToCenter = [(SIZE_BOARD[0]+BEZEL_SIZE)/4, (SIZE_BOARD[1]+BEZEL_SIZE)/2]
-MM_X_PIXEL = 1             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
+MM_X_PIXEL = 0.4             # in mm. The path will be cut depending on the pixel size. If this value is changed it is recommended to scale the pixel object
 IMAGE_FILE = '/World map.svg'# Path of the SVG image, it can be relative to the current RL station
 TEXT_FILE = 't'
 
@@ -35,21 +35,26 @@ def setup(coverToEngrave, isCurved):
     EngravingFrame = RL.Item('engraving') #RL.AddFrame('Engraving Frame', EngravingTool)
     robot.setPoseFrame(EngravingFrame)
     if isCurved:
-        EngravingStart = RL.Item('engravingCurved')
+        EngravingStart = RL.Item('engravingCurved')# [45.670000, -133.090000, -77.160000, -101.550000, 237.910000, 31.500000]
     else:
         EngravingStart = RL.Item('engravingFlat')
-    robot.MoveJ(EngravingStart)
+    #robot.MoveJ(EngravingStart.Pose()*transl(100,0,-15))
+    #robot.MoveJ(EngravingStart.Pose()*transl(0,0,-15))
+    robot.MoveL(EngravingStart)
 
     framedraw = RL.AddFrame('Frame Draw', EngravingFrame)
     framedraw.setVisible(True, True)
     if isCurved:
         framedraw.setPose(transl(0,0,1.5)*rotz(pi/2))
     else:
-        framedraw.setPose(transl(0,0,2)*rotz(pi/2))
+        framedraw.setPose(transl(0,0,1)*rotz(pi/2))
     framedraw.setParentStatic(board_draw)
 
     framedrawAbs = RL.AddFrame('Frame Draw Abs', framedraw)
-    framedrawAbs.setPose(transl(0,0,-21.5))
+    if isCurved:
+        framedrawAbs.setPose(transl(0,0,-22.5))
+    else:
+        framedrawAbs.setPose(transl(0,0,-21))
     framedrawAbs.setParentStatic(RL.Item('UR5 Base'))
     robot.setPoseFrame(framedrawAbs)
     tooldraw = RL.Item('Gripper')
@@ -61,9 +66,9 @@ def setup(coverToEngrave, isCurved):
     
 def ImgEngrave(IMAGE_FILE, robot, isCurved):
     # select the file to draw
-    svgfile = path_stationfile + IMAGE_FILE
+    #svgfile = path_stationfile + IMAGE_FILE
     # import the SVG file
-    svgdata = svg_load(svgfile)
+    svgdata = svg_load(IMAGE_FILE)
 
     IMAGE_SIZE = Point(SIZE_BOARD[0]/2,SIZE_BOARD[1])   # size of the image in MM
     svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
@@ -74,64 +79,7 @@ def ImgEngrave(IMAGE_FILE, robot, isCurved):
 
     #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
     #Between each path a approach point is made.
-    APPROACH = 0.2  # approach distance in MM for each path
-
-    for path in svgdata:
-    
-        np = path.nPoints()
-        
-        # robot movement: approach to the first target
-        p_0 = path.getPoint(0)
-        if isCurved:
-                p_0Z = -4+calcZ_coord(-p_0.y)
-        else:
-                p_0Z = 0
-        target0 = transl(p_0.x - OffsetToCenter[0], p_0.y -OffsetToCenter[1], p_0Z)
-        target0_app = target0*transl(0,0,-APPROACH)
-        framedraw = RL.Item('Frame Draw')
-        framedrawAbs = RL.Item('Frame Draw Abs')
-        #AddTarget = RL.AddTarget('Target', framedrawAbs)
-        #AddTarget.setPose(target0)
-        #AddTarget_app = RL.AddTarget('App', framedrawAbs)
-        #AddTarget_app.setPose(target0_app)
-        robot.MoveL(target0_app)
-        robot.MoveL(target0)
-        for i in range(np):
-            p_i = path.getPoint(i)
-            p_i.x = -p_i.x + OffsetToCenter[0]
-            p_i.y = -p_i.y +OffsetToCenter[1]
-            v_i = path.getVector(i)
-            
-            if isCurved:
-                p_iZ = -4+calcZ_coord(-p_i.y - 28.5)
-                pt_pose = point3D_2_pose(p_i, v_i)
-            else:
-                p_iZ = 0
-                pt_pose = point2D_2_pose(p_i, v_i)
-               
-            target = transl(-p_i.x, -p_i.y, p_iZ)
-            #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
-            #AddTarget.setPose(target)
-            # Move the robot to the next target
-            robot.MoveL(target)
-            framedraw.Paste().setPose(pt_pose)
-        pathEnd = target*transl(0,0,-APPROACH)
-    return 0
-
-def StrEngrave(TEXT_FILE, robot, isCurved):
-    # select the file to draw
-    
-    svgfile = path_stationfile + '/' + makeSVG(TEXT_FILE)
-    # import the SVG file
-    svgdata = svg_load(svgfile) 
-
-    IMAGE_SIZE = Point(SIZE_BOARD[0]/4,SIZE_BOARD[1])   # size of the image in MM
-    svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
-    size_img = svgdata.size_poly()  # returns the size of the current polygon
-
-    #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
-    #Between each path a approach point is made.
-    APPROACH = 2  # approach distance in MM for each path
+    APPROACH = 10  # approach distance in MM for each path
 
     for path in svgdata:
     
@@ -143,20 +91,20 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             p_0Z = -4+calcZ_coord(-p_0.y)
         else:
             p_0Z = 0
-        target0 = transl(p_0.x + OffsetToCenter[0], p_0.y -OffsetToCenter[1], p_0Z)*rotz(-pi/2)
-        target0_app = target0*transl(0,0,-APPROACH)
+        #target0 = transl(-p_0.x - 2*OffsetToCenter[0], -p_0.y- OffsetToCenter[1], p_0Z)*rotz(-pi/2)
+        #target0_app = target0*transl(0,0,-APPROACH)
         framedraw = RL.Item('Frame Draw')
         framedrawAbs = RL.Item('Frame Draw Abs')
         #AddTarget0 = RL.AddTarget('Target0', framedrawAbs)
         #AddTarget0.setPose(target0)
         #AddTarget_app = RL.AddTarget('App', framedrawAbs)
         #AddTarget_app.setPose(target0_app)
-        robot.MoveL(target0_app)
-        robot.MoveL(target0)
+        #robot.MoveL(target0_app)
+        #robot.MoveL(target0)
         
         for i in range(np):
             p_i = path.getPoint(i)
-            p_i.x = -p_i.x - OffsetToCenter[0]
+            p_i.x = p_i.x - OffsetToCenter[0]
             p_i.y = -p_i.y + OffsetToCenter[1]
             v_i = path.getVector(i)
             
@@ -174,6 +122,66 @@ def StrEngrave(TEXT_FILE, robot, isCurved):
             robot.MoveL(target)
             framedraw.Paste().setPose(pt_pose)
         pathEnd = target*transl(0,0,-APPROACH)
+        robot.MoveJ(pathEnd)
+    return 0
+
+def StrEngrave(TEXT_FILE, robot, isCurved):
+    # select the file to draw
+    
+    svgfile = path_stationfile + '/' + makeSVG(TEXT_FILE)
+    # import the SVG file
+    svgdata = svg_load(svgfile) 
+
+    IMAGE_SIZE = Point(SIZE_BOARD[0]/16,SIZE_BOARD[1]/4)   # size of the image in MM
+    svgdata.calc_polygon_fit(IMAGE_SIZE, MM_X_PIXEL)
+    size_img = svgdata.size_poly()  # returns the size of the current polygon
+
+    #Our Path takes and svg image and- converts them to a set of path segments, which is made up of points.
+    #Between each path a approach point is made.
+    APPROACH = 10  # approach distance in MM for each path
+
+    for path in svgdata:
+    
+        np = path.nPoints()
+            
+        # robot movement: approach to the first target
+        p_0 = path.getPoint(0)
+        if isCurved:
+            p_0Z = -4+calcZ_coord(-p_0.y)
+        else:
+            p_0Z = 0
+        target0 = transl(p_0.x + OffsetToCenter[0], p_0.y, p_0Z)*rotz(-pi/2)
+        target0_app = target0*transl(0,0,-APPROACH)
+        framedraw = RL.Item('Frame Draw')
+        framedrawAbs = RL.Item('Frame Draw Abs')
+        #AddTarget0 = RL.AddTarget('Target0', framedrawAbs)
+        #AddTarget0.setPose(target0)
+        #AddTarget_app = RL.AddTarget('App', framedrawAbs)
+        #AddTarget_app.setPose(target0_app)
+        robot.MoveL(target0_app)
+        #robot.MoveL(target0)
+        
+        for i in range(np):
+            p_i = path.getPoint(i)
+            p_i.x = -p_i.x - OffsetToCenter[0]
+            p_i.y = -p_i.y #+ OffsetToCenter[1] - OffsetToCenter[1]
+            v_i = path.getVector(i)
+            
+            if isCurved:
+                p_iZ = -4+calcZ_coord(-p_i.y- 28.5)
+                pt_pose = point3D_2_pose(p_i, v_i)
+            else:
+                p_iZ = 0
+                pt_pose = point2D_2_pose(p_i, v_i)
+                
+            target = transl(-p_i.x, -p_i.y, p_iZ)*rotz(-pi/2)
+            #AddTarget = RL.AddTarget('Engraving Target', framedrawAbs)
+            #AddTarget.setPose(target)
+            # Move the robot to the next target
+            robot.MoveL(target)
+            framedraw.Paste().setPose(pt_pose)
+        pathEnd = target*transl(0,0,-APPROACH)
+        robot.MoveJ(pathEnd)
     return 0
 
 def makeSVG(TEXT_FILE):
@@ -273,9 +281,9 @@ while True:
 
 
     if event == 'PO':
-        #if values['SBCC'] is "" or values['SAOF'] is "" or values['STCT'] is "" or values['STCC'] is "":
-        #    sg.popup_error(f'Fill everything out!')
-        #else:
+        if values['SBCC'] is "" or values['SAOF'] is "" or values['STCT'] is "" or values['STCC'] is "":
+            sg.popup_error(f'Fill everything out!')
+        else:
             #Place order
             break
 
@@ -286,7 +294,7 @@ window.close()
 #Robolink instantiations
 RL = Robolink()
 path_stationfile = RL.getParam('PATH_OPENSTATION')
-RL.setSimulationSpeed(8)
+RL.setSimulationSpeed(5)
 robot = RL.Item('UR5')
 gripper = RL.Item('gripper')
 progReset = RL.Item('Reset')
@@ -340,6 +348,8 @@ dropCoverTarget = RL.Item('dropCover')
 grabCoverTarget = RL.Item('grabCover')
 
 palletFrame = RL.Item('Pallet Frame')
+palletTarget = RL.Item('Pallet Target')
+
 robot.setSpeed(200)
 robot.MoveJ(home)
 progReset.RunProgram()
@@ -408,16 +418,13 @@ def getCovers(coverType):
         
     robot.MoveL(approach)
     robot.MoveL(grip)
-    #time.sleep(1)
     setGripper(60)
 
     #Attaches appropriate cover to gripper
     attachCovers(coverType, 'gripper', color)
-    #time.sleep(1)
     robot.MoveL(approach)
     return color
     
-
 def coverToCarrier(coverType, color):
     
     if coverType == 'bottom':
@@ -430,7 +437,7 @@ def coverToCarrier(coverType, color):
     
     robot.MoveL(approachCarrierTarget)
     robot.MoveL(grip)
-    #time.sleep(1)
+    time.sleep(0.5)
     setGripper(85)
 
     # attaches apropriate cover to gripper
@@ -447,10 +454,13 @@ def coverToPallet(coverType, color):
     
     # attaches apropriate cover to gripper
     attachCovers(coverType, 'gripper', color)
-    robot.MoveJ(transl(0,0,150))
-                
+    robot.MoveL(topCoverCarrierTarget.Pose()*transl(0,0,-50))            
     robot.setPoseFrame(palletFrame)
-    robot.MoveJ(transl(63.565,88.658,187.103)*rotx(degToRad(-180))*rotz(degToRad(-89.218)))
+    #robot.MoveJ(palletTarget.Pose()*transl(-150,0,-100))
+    robot.MoveJ(palletTarget.Pose()*transl(0,0,-100))
+    robot.MoveL(palletTarget.Pose())
+    attachCovers(coverType, 'Pallet Frame', color)
+    robot.MoveL(palletTarget.Pose()*transl(0,0,-50))
 
 #Function for placing PCB
 def getPCB(color):
@@ -461,23 +471,24 @@ def getPCB(color):
 
     robot.MoveL(approach)
     robot.MoveL(grip)
-    #time.sleep(1)
+    time.sleep(0.5)
     setGripper(55)
 
     #Attaches appropriate cover to gripper
     PCBPart.setParentStatic(gripper)
-    #time.sleep(1)
+    
     robot.MoveL(approach)
 
     robot.setPoseFrame(carrierFrame)
     approachCarrierTarget = topCoverCarrierTarget.Pose()*transl(0, 0, -100)
-    grip = topCoverCarrierTarget.Pose()*transl(0, 0, 0)
+    grip = topCoverCarrierTarget.Pose()*transl(0, 1.5, 0)
 
     robot.MoveL(approachCarrierTarget)
     robot.MoveL(grip)
-    #time.sleep(1)
+    time.sleep(0.5)
     setGripper(85)
-
+    #time.sleep(5)
+    
     if color == 0:
         PCBPart.setParentStatic(blackBottomCover)
     elif color == 1:
@@ -486,16 +497,15 @@ def getPCB(color):
         PCBPart.setParentStatic(blueBottomCover)
 
     PCBPart.setPose(transl(2.5, -4.86, 3.5))
-
+    #PCBPart.setPose(transl(0, -4.86, 0))
     # attaches apropriate cover to gripper
     robot.MoveL(approachCarrierTarget)
     secondFuse = False
     return 0
 
-def degToRad (eulDeg);
-    eulDeg = eulDeg*2pi
-    eulDeg = eulDeg/180
-    return eulDeg
+def deg2Rad(eulDeg):
+    rad = (eulDeg*(2*pi/180))
+    return rad
 
 def getFuse(fuse1, fuse2 , secondFuse):
     if fuse1 == True or fuse2 == True:
@@ -503,31 +513,30 @@ def getFuse(fuse1, fuse2 , secondFuse):
         robot.setPoseFrame(fuseFrame)
     
         approach = fuseTarget.Pose()*transl(0, 0, -60)
-        grip = fuseTarget.Pose()*transl(0, 0, -30) #-161
+        grip = fuseTarget.Pose()*transl(0, 0, -25) #-161
 
         robot.MoveL(approach)
         robot.MoveL(grip)
-        #time.sleep(1)
+        time.sleep(0.5)
         setGripper(4.5)
         if secondFuse == False:
             fusePart1.setParentStatic(gripper)
         else:
             fusePart2.setParentStatic(gripper)
         
-        #time.sleep(1)
+        
         robot.MoveL(approach)
         if secondFuse == False:
-            fusePart2.setPose(fusePart2.Pose()*transl(0,0,-5))
-            
+            fusePart2.setPose(fusePart2.Pose()*transl(0,0,-5)) 
 
         robot.setPoseFrame(carrierFrame)
         if fuse1 == True:
             approach = fusePlace1.Pose()*transl(0, 0, -60)
-            grip = fusePlace1.Pose()*transl(0, 0, -30) 
+            grip = fusePlace1.Pose()*transl(0, 0, -25) 
             fuse1 = False
         else:
             approach = fusePlace2.Pose()*transl(0, 0, -60)
-            grip = fusePlace2.Pose()*transl(0, 0, -30) 
+            grip = fusePlace2.Pose()*transl(0, 0, -25) 
             fuse2 = False
 
         robot.MoveL(approach)
@@ -537,9 +546,9 @@ def getFuse(fuse1, fuse2 , secondFuse):
         else:
             fusePart2.setParentStatic(PCBPart)
            
-        #time.sleep(1)
+        time.sleep(0.5)
         setGripper(85)
-        #time.sleep(1)
+        
         robot.MoveL(approach)
         secondFuse = True
         return fuse1, fuse2, secondFuse
@@ -559,33 +568,35 @@ def flipaDaTable(coverType, color):
     drop = dropCoverTarget.Pose()*transl(0,0,0)
     robot.MoveJ(approach)
     robot.MoveL(drop)
+    time.sleep(0.5)
 
     setGripper(85)
     attachCovers(coverType, 'coverTurnFrame', colorToInt[color])
-    #time.sleep(1)
     robot.MoveL(RL.Item('approach grab'))
 
     approach = grabCoverTarget.Pose()*transl(0,0, -100)
     grab = grabCoverTarget.Pose()*transl(0,0,0)
+
     robot.MoveJ(approach)
     robot.MoveL(grab)
-
     setGripper(60)
+    time.sleep(0.5)
     attachCovers(coverType, 'gripper', colorToInt[color])
-    #time.sleep(1)
+    robot.MoveL(approach)
 
     robot.setPoseFrame(carrierFrame)
-    approach = topCoverCarrierTarget.Pose()*transl(0,0, -100)
-    drop = topCoverCarrierTarget.Pose()*transl(0,-2.5,12.5)
+    approach = topCoverCarrierTarget.Pose()*transl(0,-2.5, -100)
+    drop = topCoverCarrierTarget.Pose()*transl(0,-2.5,2)
     robot.MoveJ(approach)
     robot.MoveL(drop)
+    time.sleep(0.5)
     setGripper(85)
     attachCovers(coverType, 'PCBPart', colorToInt[color])
-    #robot.MoveJ(approach)
 
 
 color = getCovers('bottom')
 coverToCarrier('bottom', color)
+#time.sleep(1)
 getPCB(color)
 
 
@@ -616,6 +627,7 @@ print(values['textbox'])
 if values['textbox'] != "" and relevantpath:
     print('both')
     setup(coverToEngrave, isCurved)
+    ImgEngrave(imagePath, robot, isCurved)
     StrEngrave(values['textbox'], robot, isCurved)
 elif values['textbox'] != "" and not relevantpath:
     setup(coverToEngrave, isCurved)
@@ -623,9 +635,16 @@ elif values['textbox'] != "" and not relevantpath:
     print('only text')
 elif values['textbox'] == "" and relevantpath:
     print('only pic')
+    setup(coverToEngrave, isCurved)
+    ImgEngrave(imagePath, robot, isCurved)
 elif values['textbox'] == "" and not relevantpath:
     print('no engraving')
+robot.setPoseFrame(carrierFrame)
+#robot.MoveJ(topCoverCarrierTarget.Pose()*transl(0,0,-50))
+robot.MoveL(home)
 
 flipaDaTable(values['STCT'], values['STCC'])
 
+coverToPallet('bottom', color)
 
+robot.MoveJ(home)
