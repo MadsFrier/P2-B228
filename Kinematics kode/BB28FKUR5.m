@@ -43,6 +43,7 @@ T6_W=[-1 0 0  0;
 %RDK test
 TestAngles = [11 22 33 44 55 66];
 Qtest= (TestAngles + [0 90 0 90 0 0]).*pi/180;
+
 robot.MoveJ(TestAngles);
 pose = robot.Pose();
 eul = tform2eul(robot.Pose(), 'zyx').*180/pi;
@@ -51,8 +52,11 @@ RDKPose = [pose(1,4) pose(2,4) pose(3,4) eul(1) eul(2) eul(3)]
 %Matlab test
 T0_6=cast(UR_5.fkine(Qtest),'like',T6_W);
 TB_W=TB_0*T0_6*T6_W;
+
 eul = tform2eul(TB_W, 'zyx').*180/pi;
 CalcPose = [TB_W(1,4) TB_W(2,4) TB_W(3,4) eul(1) eul(2) eul(3)]
+TB_W2 = transl(TB_W(1,4), TB_W(2,4), TB_W(3,4))*eul2tform(eul, 'zyx')
+%% 
 
 distance = 0;
 for i = length(CalcPose) 
